@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מערכת הרשאות</title>
+<style>
+:root{
+  --bg:#F3F5F9; --panel:#FFFFFF; --panel2:#F7F9FC; --line:#DCE2EC; --fg:#162032; --muted:#5D6B82;
+  --accent:#1D5FD1; --accent-fg:#FFFFFF; --ok:#1E7B45; --warn:#B45309; --bad:#B42318; --info:#0E6E8C;
+  --ok-bg:#E7F5EC; --warn-bg:#FDF2E3; --bad-bg:#FDECEA; --info-bg:#E5F3F8;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1320; --panel:#151D2E; --panel2:#1B2538; --line:#2A3650; --fg:#E7ECF5; --muted:#93A0B8;
+    --accent:#5B93F0; --accent-fg:#0D1320; --ok:#4CC27F; --warn:#F0A54A; --bad:#F2766B; --info:#4FB8D6;
+    --ok-bg:#16301F; --warn-bg:#352612; --bad-bg:#3A1A18; --info-bg:#122C36;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1320; --panel:#151D2E; --panel2:#1B2538; --line:#2A3650; --fg:#E7ECF5; --muted:#93A0B8;
+  --accent:#5B93F0; --accent-fg:#0D1320; --ok:#4CC27F; --warn:#F0A54A; --bad:#F2766B; --info:#4FB8D6;
+  --ok-bg:#16301F; --warn-bg:#352612; --bad-bg:#3A1A18; --info-bg:#122C36;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Segoe UI","Heebo","Assistant","Arial Hebrew",Arial,sans-serif;font-size:15px;line-height:1.55;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 14px;cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.ok{border-color:var(--ok);color:var(--ok)}
+.btn.bad{border-color:var(--bad);color:var(--bad)}
+.btn.small{padding:3px 10px;min-height:30px;font-size:.85rem}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.nv:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=password],select,textarea{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px;width:100%}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+
+/* כניסה */
+.login{max-width:380px;margin:10vh auto 0;padding:0 16px}
+.login .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+.login h1{margin:0 0 4px;font-size:1.4rem}
+.login p{margin:0 0 6px;color:var(--muted);font-size:.9rem}
+.err{color:var(--bad);font-size:.9rem;min-height:1.4em;margin-top:8px}
+.hint{margin-top:14px;font-size:.82rem;color:var(--muted);background:var(--panel2);border-radius:8px;padding:8px 10px}
+
+/* מעטפת */
+header.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header.top h1{font-size:1.05rem;margin:0}
+.who{margin-inline-start:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.88rem}
+.role{border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:0 10px;font-size:.8rem}
+.layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:0;min-height:calc(100vh - 59px)}
+nav{background:var(--panel);border-left:1px solid var(--line);padding:12px 8px}
+.nv{display:block;width:100%;text-align:right;background:none;border:0;border-radius:8px;padding:9px 12px;cursor:pointer;min-height:40px}
+.nv:hover{background:var(--panel2)}
+.nv[aria-current="true"]{background:var(--panel2);box-shadow:inset -3px 0 0 var(--accent);font-weight:600}
+.nv .lv{font-size:.72rem;color:var(--muted);margin-inline-start:6px;font-weight:400}
+.tools{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:grid;gap:6px}
+main{padding:16px;min-width:0}
+.banner{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.9rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.demo{background:var(--info-bg);color:var(--info);border-radius:10px;padding:6px 12px;margin-bottom:12px;font-size:.85rem}
+h2{font-size:1.15rem;margin:0 0 12px}
+h3{font-size:1rem;margin:0 0 8px}
+.pn{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.kpi .v{font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:.85rem}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:right;padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:.82rem;white-space:nowrap}
+td.num{font-variant-numeric:tabular-nums}
+.tag{display:inline-block;border-radius:999px;padding:0 9px;font-size:.78rem;border:1px solid currentColor;white-space:nowrap}
+.t-ok{color:var(--ok);background:var(--ok-bg)} .t-warn{color:var(--warn);background:var(--warn-bg)} .t-bad{color:var(--bad);background:var(--bad-bg)} .t-info{color:var(--info);background:var(--info-bg)} .t-mut{color:var(--muted)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filters .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.noacc{text-align:center;padding:40px 16px;color:var(--muted)}
+
+/* בקשה */
+.req{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.req .hd{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;margin-bottom:10px}
+.req .meta{color:var(--muted);font-size:.85rem}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.blk{border-radius:10px;padding:10px 12px;border:1px solid var(--line);background:var(--panel2)}
+.blk h4{margin:0 0 6px;font-size:.9rem;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.blk p{margin:0 0 4px;font-size:.9rem}
+.blk.dmg{border-color:var(--bad)} .blk.opp{border-color:var(--ok)} .blk.res{border-color:var(--accent)}
+.small{font-size:.83rem;color:var(--muted)}
+.trade{margin-top:10px;border-radius:10px;padding:8px 12px;background:var(--warn-bg);color:var(--fg);font-size:.88rem;border:1px solid var(--warn)}
+.act{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+.act .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.dec{margin-top:12px;border-radius:10px;padding:10px 12px;background:var(--panel2);border:1px solid var(--line);font-size:.9rem}
+.dec p{margin:2px 0}
+details summary{cursor:pointer;color:var(--accent);font-size:.9rem;margin-top:8px}
+
+/* ניהול */
+.matrix select{min-width:110px}
+.addrow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:end}
+.addrow label{margin-top:0}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr}
+  nav{border-left:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px;padding:8px}
+  .nv{width:auto}
+  .tools{width:100%;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .three{grid-template-columns:1fr}
+  .addrow{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="login hidden">
+  <div class="box">
+    <h1>מערכת הרשאות</h1>
+    <p>כניסה עם שם משתמש וסיסמה</p>
+    <div id="noData" class="hidden">
+      <p>עוד לא נטען קובץ נתונים.</p>
+      <button class="btn primary" id="loadFirst">טעינה</button>
+    </div>
+    <form id="loginForm">
+      <label for="lu">שם משתמש</label>
+      <input type="text" id="lu" autocomplete="username" autocapitalize="off">
+      <label for="lp">סיסמה</label>
+      <input type="password" id="lp" autocomplete="current-password">
+      <div class="err" id="lerr"></div>
+      <button class="btn primary" type="submit" style="width:100%">כניסה</button>
+    </form>
+    <div class="hint hidden" id="demoHint"></div>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <header class="top">
+    <h1 id="appTitle">מערכת הרשאות</h1>
+    <div class="who">
+      <span id="whoName"></span>
+      <span class="role" id="whoRole"></span>
+      <button class="btn small" id="logout">יציאה</button>
+    </div>
+  </header>
+  <div class="layout">
+    <nav id="nav"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+
+<script>
+const EMBED = /*__DATA__*/null;
+// מפתח נפרד לכל עותק, כדי שעותק ההפצה לא יקרא את מה שעותק העבודה שמר באותו מחשב
+const KEY = EMBED ? "perm-system-work-v1" : "perm-system-dist-v1";
+const SKEY = KEY + "-session";
+const LV = { none: 0, view: 1, edit: 2 };
+const LVNAME = { none: "אין גישה", view: "צפייה", edit: "עריכה" };
+const ST = {
+  open: ["ממתינה להחלטה", "t-warn"],
+  approved: ["אושרה", "t-ok"],
+  rejected: ["נדחתה", "t-bad"],
+  changed: ["אושרה עם שינוי", "t-info"]
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+let S = null;        // מצב המערכת
+let me = null;       // המשתמש המחובר
+let previewRole = null;
+let reqFilter = "open";
+
+/* ---------- שמירה וטעינה ---------- */
+function loadState() {
+  try { const t = localStorage.getItem(KEY); if (t) return JSON.parse(t); } catch (e) {}
+  return EMBED ? clone(EMBED) : null;
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function valid(d) {
+  return d && Array.isArray(d.areas) && Array.isArray(d.roles) && Array.isArray(d.users)
+    && Array.isArray(d.projects) && Array.isArray(d.requests);
+}
+function stamp() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return `${p(d.getHours())}.${p(d.getMinutes())}_${p(d.getDate())}${p(d.getMonth() + 1)}${d.getFullYear()}`;
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `נתוני_מערכת_הרשאות_${stamp()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function pickFile() { $("#fileIn").value = ""; $("#fileIn").click(); }
+$("#fileIn").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch (err) { alert("הקובץ אינו קובץ נתונים תקין."); return; }
+    if (!valid(d)) { alert("בקובץ חסרים חלקים: אזורים, תפקידים, משתמשים, פרויקטים או בקשות."); return; }
+    d.log = Array.isArray(d.log) ? d.log : [];
+    S = d; save(); logoutNow();
+  };
+  r.readAsText(f, "utf-8");
+});
+
+/* ---------- הרשאות ---------- */
+const roleOf = id => S.roles.find(r => r.id === id);
+const userOf = id => S.users.find(u => u.id === id);
+const areaOf = id => S.areas.find(a => a.id === id);
+function realLevel(area) { const r = roleOf(me.role); return LV[(r && r.perms[area]) || "none"] || 0; }
+function level(area) {
+  const r = roleOf(previewRole || me.role);
+  return LV[(r && r.perms[area]) || "none"] || 0;
+}
+const can = (area, need) => level(area) >= LV[need];
+const isRealAdmin = () => realLevel("admin") >= LV.edit;
+function log(action) {
+  S.log = S.log || [];
+  S.log.push({ at: new Date().toISOString(), user: me ? me.id : "", action });
+  if (S.log.length > 300) S.log = S.log.slice(-300);
+}
+
+/* ---------- כניסה ---------- */
+function showLogin() {
+  $("#appView").classList.add("hidden");
+  $("#loginView").classList.remove("hidden");
+  const has = !!S;
+  $("#noData").classList.toggle("hidden", has);
+  $("#loginForm").classList.toggle("hidden", !has);
+  const h = $("#demoHint");
+  if (has && S.meta && S.meta.demo) {
+    h.classList.remove("hidden");
+    h.innerHTML = "נתונים לדוגמה. משתמשים לניסיון: " +
+      S.users.map(u => `${esc(u.username)} (${esc((roleOf(u.role) || {}).name || "")})`).join(", ") +
+      ". הסיסמה של כולם בדוגמה: 1234.";
+  } else h.classList.add("hidden");
+  if (has) $("#lu").focus();
+}
+$("#loadFirst").addEventListener("click", pickFile);
+$("#loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const u = $("#lu").value.trim(), p = $("#lp").value;
+  const user = S.users.find(x => x.username === u && x.password === p);
+  if (!user) { $("#lerr").textContent = "שם המשתמש או הסיסמה שגויים."; return; }
+  $("#lerr").textContent = ""; $("#lp").value = "";
+  me = user; previewRole = null;
+  try { sessionStorage.setItem(SKEY, user.id); } catch (e) {}
+  log("נכנס למערכת"); save();
+  showApp();
+});
+function logoutNow() {
+  me = null; previewRole = null;
+  try { sessionStorage.removeItem(SKEY); } catch (e) {}
+  showLogin();
+}
+$("#logout").addEventListener("click", () => { log("יצא מהמערכת"); save(); logoutNow(); });
+
+/* ---------- מעטפת ---------- */
+function visibleAreas() { return S.areas.filter(a => level(a.id) >= LV.view); }
+function showApp() {
+  $("#loginView").classList.add("hidden");
+  $("#appView").classList.remove("hidden");
+  $("#appTitle").textContent = (S.meta && S.meta.title) || "מערכת הרשאות";
+  $("#whoName").textContent = me.display;
+  $("#whoRole").textContent = (roleOf(me.role) || {}).name || "";
+  route();
+}
+function drawNav(cur) {
+  const areas = visibleAreas();
+  let h = areas.map(a => `<button class="nv" data-go="${esc(a.id)}" aria-current="${a.id === cur}">${esc(a.name)}<span class="lv">${LVNAME[Object.keys(LV).find(k => LV[k] === level(a.id))]}</span></button>`).join("");
+  h += `<div class="tools">`;
+  if (isRealAdmin()) {
+    h += `<label for="pv" style="margin:0">צפייה כתפקיד</label><select id="pv"><option value="">התפקיד שלי</option>${S.roles.map(r => `<option value="${esc(r.id)}" ${previewRole === r.id ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`;
+    h += `<button class="btn small" data-tool="export">שמירה לקובץ</button>`;
+    h += `<button class="btn small" data-tool="load">טעינה</button>`;
+    h += `<button class="btn small" data-tool="reset">איפוס</button>`;
+  }
+  h += `</div>`;
+  $("#nav").innerHTML = h;
+}
+$("#nav").addEventListener("click", e => {
+  const g = e.target.closest("[data-go]");
+  if (g) { location.hash = g.dataset.go; return; }
+  const t = e.target.closest("[data-tool]");
+  if (!t) return;
+  if (t.dataset.tool === "export") exportData();
+  if (t.dataset.tool === "load") pickFile();
+  if (t.dataset.tool === "reset") {
+    if (!confirm(EMBED ? "לחזור לנתוני המקור? כל השינויים שלא נשמרו לקובץ יימחקו." : "למחוק את הנתונים מהדפדפן הזה? אחר כך צריך לטעון קובץ נתונים מחדש.")) return;
+    try { localStorage.removeItem(KEY); } catch (err) {}
+    S = EMBED ? clone(EMBED) : null; logoutNow();
+  }
+});
+$("#nav").addEventListener("change", e => {
+  if (e.target.id !== "pv") return;
+  previewRole = e.target.value || null;
+  route();
+});
+window.addEventListener("hashchange", () => { if (me) route(); });
+
+function route() {
+  const areas = visibleAreas();
+  let cur = location.hash.slice(1);
+  const known = !!areaOf(cur);
+  if (!known) cur = areas.length ? areas[0].id : "";
+  drawNav(cur);
+  let h = "";
+  if (previewRole) h += `<div class="banner">אתה צופה במערכת כמו שרואה אותה התפקיד "${esc(roleOf(previewRole).name)}". פעולות עריכה כבויות בזמן הצפייה.<button class="btn small" id="endPv">חזרה לתפקיד שלי</button></div>`;
+  if (S.meta && S.meta.demo) h += `<div class="demo">כל הנתונים במערכת הם לדוגמה בלבד.</div>`;
+  if (!cur) h += `<div class="pn noacc">לתפקיד הזה אין גישה לאף אזור במערכת.</div>`;
+  else if (level(cur) < LV.view) h += `<div class="pn noacc">אין לך הרשאה לאזור "${esc(areaOf(cur).name)}".</div>`;
+  else h += VIEWS[cur] ? VIEWS[cur]() : "";
+  $("#main").innerHTML = h;
+  const ep = $("#endPv"); if (ep) ep.addEventListener("click", () => { previewRole = null; route(); });
+}
+const canEdit = area => !previewRole && can(area, "edit");
+
+/* ---------- עזרים ---------- */
+function fmtDate(s) { if (!s) return ""; const d = new Date(s); return isNaN(d) ? esc(s) : d.toLocaleDateString("he-IL"); }
+function fmtTime(s) { const d = new Date(s); return isNaN(d) ? esc(s) : d.toLocaleDateString("he-IL") + " " + d.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }); }
+function daysLeft(s) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const d = new Date(s + "T00:00:00");
+  return Math.round((d - t) / 864e5);
+}
+function windowTag(s) {
+  const n = daysLeft(s);
+  if (isNaN(n)) return "";
+  if (n < 0) return `<span class="tag t-bad">החלון נסגר לפני ${-n} ימים</span>`;
+  if (n === 0) return `<span class="tag t-bad">החלון נסגר היום</span>`;
+  return `<span class="tag ${n <= 7 ? "t-bad" : n <= 21 ? "t-warn" : "t-mut"}">עוד ${n} ימים</span>`;
+}
+const statusTag = s => { const st = ST[s] || [s, "t-mut"]; return `<span class="tag ${st[1]}">${esc(st[0])}</span>`; };
+const projStatusCls = s => s === "תקין" ? "t-ok" : s === "בסיכון" ? "t-warn" : s === "באיחור" ? "t-bad" : "t-mut";
+const projName = id => { const p = S.projects.find(x => x.id === id); return p ? `${p.id} · ${p.name}` : id || ""; };
+function sortReqs(list) {
+  return list.slice().sort((a, b) => {
+    const ao = a.status === "open" ? 0 : 1, bo = b.status === "open" ? 0 : 1;
+    if (ao !== bo) return ao - bo;
+    const ad = a.windowCloses || "9999", bd = b.windowCloses || "9999";
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    return (a.reversible ? 1 : 0) - (b.reversible ? 1 : 0);
+  });
+}
+
+/* ---------- אזורים ---------- */
+const VIEWS = {};
+
+VIEWS.dash = () => {
+  const P = S.projects;
+  let h = `<h2>לוח בקרה</h2><div class="kpis">`;
+  h += `<div class="kpi"><div class="v">${P.length}</div><div class="l">פרויקטים</div></div>`;
+  h += `<div class="kpi"><div class="v">${P.filter(p => p.status === "בסיכון").length}</div><div class="l">בסיכון</div></div>`;
+  h += `<div class="kpi"><div class="v">${P.filter(p => p.status === "באיחור").length}</div><div class="l">באיחור</div></div>`;
+  h += `<div class="kpi"><div class="v">${P.reduce((s, p) => s + (+p.budget || 0), 0).toLocaleString("he-IL")}</div><div class="l">תקציב כולל, מלש"ח לדוגמה</div></div>`;
+  if (can("approvals", "view")) {
+    const open = S.requests.filter(r => r.status === "open");
+    h += `<div class="kpi"><div class="v">${open.length}</div><div class="l">בקשות שממתינות להחלטה</div></div>`;
+    h += `<div class="kpi"><div class="v">${open.filter(r => daysLeft(r.windowCloses) <= 14).length}</div><div class="l">חלונות שנסגרים בתוך 14 יום</div></div>`;
+  }
+  h += `</div>`;
+  if (can("approvals", "view")) {
+    const open = sortReqs(S.requests.filter(r => r.status === "open"));
+    h += `<div class="pn"><h3>החלונות הקרובים</h3>${open.length ? `<div class="tw"><table><tr><th>בקשה</th><th>נושא</th><th>החלון נסגר</th><th>נזק</th></tr>${open.map(r => `<tr><td>${esc(r.id)}</td><td>${esc(r.topic)}</td><td>${fmtDate(r.windowCloses)} ${windowTag(r.windowCloses)}</td><td>${r.reversible ? '<span class="tag t-warn">הפיך</span>' : '<span class="tag t-bad">בלתי הפיך</span>'}</td></tr>`).join("")}</table></div>` : '<p class="small">אין בקשות פתוחות.</p>'}</div>`;
+  } else {
+    h += `<div class="pn small">נתוני תור האישורים לא מוצגים כאן, כי לתפקיד שלך אין גישה לתור.</div>`;
+  }
+  return h;
+};
+
+VIEWS.projects = () => {
+  const ed = canEdit("projects");
+  const STS = ["תקין", "בסיכון", "באיחור"];
+  let h = `<h2>פרויקטים</h2><div class="pn tw"><table><tr><th>מספר</th><th>שם</th><th>אזור</th><th>שלב</th><th>תקציב, מלש"ח</th><th>מצב</th></tr>`;
+  h += S.projects.map(p => `<tr><td>${esc(p.id)}</td><td>${esc(p.name)}</td><td>${esc(p.region)}</td><td>${esc(p.stage)}</td><td class="num">${(+p.budget || 0).toLocaleString("he-IL")}</td><td>${ed
+    ? `<select data-proj="${esc(p.id)}" aria-label="מצב ${esc(p.id)}">${STS.map(s => `<option ${s === p.status ? "selected" : ""}>${s}</option>`).join("")}</select>`
+    : `<span class="tag ${projStatusCls(p.status)}">${esc(p.status)}</span>`}</td></tr>`).join("");
+  h += `</table></div>`;
+  if (!ed) h += `<p class="small">צפייה בלבד. שינוי מצב דורש הרשאת עריכה לאזור הפרויקטים.</p>`;
+  return h;
+};
+
+function reqCard(r) {
+  const ed = canEdit("approvals");
+  const adminEd = canEdit("admin");
+  let h = `<div class="req"><div class="hd"><div><h3>${esc(r.id)} · ${esc(r.topic)}</h3><div class="meta">${esc(r.agent)} · ${esc(projName(r.project))}</div></div>${statusTag(r.status)}</div>`;
+  h += `<div class="three">`;
+  h += `<div class="blk dmg"><h4>בקרת נזקים ${r.reversible ? '<span class="tag t-warn">הפיך</span>' : '<span class="tag t-bad">בלתי הפיך</span>'}</h4><p>${esc(r.damage)}</p>${r.accumulates ? `<p class="small">מה נצבר בינתיים: ${esc(r.accumulates)}</p>` : ""}</div>`;
+  h += `<div class="blk opp"><h4>ניהול הזדמנויות ${windowTag(r.windowCloses)}</h4><p>${esc(r.opportunity)}</p><p class="small">החלון נסגר: ${fmtDate(r.windowCloses)}</p></div>`;
+  h += `<div class="blk res"><h4>המענה המוצע</h4><p>${esc(r.response)}</p></div>`;
+  h += `</div>`;
+  if (r.tradeoff) h += `<div class="trade">אי אפשר את שניהם במלואם: ${esc(r.tradeoff)}</div>`;
+  h += `<p class="small" style="margin:8px 0 0">על מה הסוכן מסתמך: ${esc(r.basis)}</p>`;
+  if (r.status === "open") {
+    if (ed) {
+      h += `<div class="act"><label for="n-${esc(r.id)}">הערה לסוכן (לא חובה)</label><textarea id="n-${esc(r.id)}"></textarea>
+        <div class="row"><button class="btn ok" data-dec="approved" data-id="${esc(r.id)}">אישור המענה</button><button class="btn bad" data-dec="rejected" data-id="${esc(r.id)}">דחייה</button></div>
+        <details><summary>שינוי המענה</summary><label for="c-${esc(r.id)}">המענה המתוקן</label><textarea id="c-${esc(r.id)}">${esc(r.response)}</textarea><div class="row"><button class="btn primary" data-dec="changed" data-id="${esc(r.id)}">אישור עם שינוי</button></div></details></div>`;
+    } else h += `<p class="small" style="margin-top:10px">ממתין להחלטה של בעל הרשאת עריכה.</p>`;
+  } else if (r.decision) {
+    const d = r.decision, u = userOf(d.by);
+    h += `<div class="dec"><p>${statusTag(d.choice)} על ידי ${esc(u ? u.display : "משתמש שנמחק")}, ${fmtTime(d.at)}</p>${d.text ? `<p>המענה המתוקן: ${esc(d.text)}</p>` : ""}${d.note ? `<p>הערה: ${esc(d.note)}</p>` : ""}</div>`;
+    if (r.outcome) h += `<div class="dec"><p>דיווח ביצוע מהסוכן: ${esc(r.outcome)}</p></div>`;
+    if (adminEd && r.status !== "rejected") h += `<details><summary>${r.outcome ? "עדכון" : "הוספת"} דיווח ביצוע (מדמה דיווח של סוכן)</summary><textarea id="o-${esc(r.id)}">${esc(r.outcome)}</textarea><div class="row" style="margin-top:8px"><button class="btn small" data-out="${esc(r.id)}">שמירת דיווח</button></div></details>`;
+  }
+  return h + `</div>`;
+}
+VIEWS.approvals = () => {
+  const F = { open: "פתוחות", decided: "הוחלטו", all: "הכול" };
+  let list = S.requests;
+  if (reqFilter === "open") list = list.filter(r => r.status === "open");
+  if (reqFilter === "decided") list = list.filter(r => r.status !== "open");
+  let h = `<h2>תור אישורים</h2><p class="small" style="margin-top:-6px">כל בקשה משלבת בקרת נזקים וניהול הזדמנויות. הסדר: הבקשות הפתוחות קודם, לפי החלון שנסגר ראשון, ונזק בלתי הפיך לפני הפיך.</p>`;
+  h += `<div class="filters">${Object.keys(F).map(k => `<button class="btn small" data-filter="${k}" aria-pressed="${reqFilter === k}">${F[k]} (${k === "open" ? S.requests.filter(r => r.status === "open").length : k === "decided" ? S.requests.filter(r => r.status !== "open").length : S.requests.length})</button>`).join("")}</div>`;
+  h += list.length ? sortReqs(list).map(reqCard).join("") : `<div class="pn noacc">אין בקשות בתצוגה הזאת.</div>`;
+  return h;
+};
+
+VIEWS.log = () => {
+  const L = (S.log || []).slice().reverse();
+  return `<h2>יומן פעולות</h2><div class="pn tw">${L.length ? `<table><tr><th>מתי</th><th>מי</th><th>פעולה</th></tr>${L.map(x => { const u = userOf(x.user); return `<tr><td>${fmtTime(x.at)}</td><td>${esc(u ? u.display : "")}</td><td>${esc(x.action)}</td></tr>`; }).join("")}</table>` : '<p class="small">היומן ריק.</p>'}</div>`;
+};
+
+VIEWS.admin = () => {
+  const ed = canEdit("admin");
+  const dis = ed ? "" : "disabled";
+  let h = `<h2>ניהול הרשאות</h2>`;
+  h += `<div class="pn"><h3>תפקידים והרשאות</h3><p class="small" style="margin-top:0">כל תא קובע מה התפקיד יכול לעשות באזור.</p><div class="tw"><table class="matrix"><tr><th>תפקיד</th>${S.areas.map(a => `<th>${esc(a.name)}</th>`).join("")}<th>משתמשים</th><th></th></tr>`;
+  h += S.roles.map(r => {
+    const n = S.users.filter(u => u.role === r.id).length;
+    return `<tr><td>${esc(r.name)}</td>${S.areas.map(a => {
+      const locked = r.id === me.role && a.id === "admin";
+      return `<td><select data-perm="${esc(r.id)}|${esc(a.id)}" ${dis} ${locked ? 'disabled title="אי אפשר להוריד מהתפקיד שלך את הגישה לניהול"' : ""} aria-label="${esc(r.name)} ב${esc(a.name)}">${a.levels.map(l => `<option value="${l}" ${(r.perms[a.id] || "none") === l ? "selected" : ""}>${LVNAME[l]}</option>`).join("")}</select></td>`;
+    }).join("")}<td class="num">${n}</td><td>${ed && n === 0 && r.id !== me.role ? `<button class="btn small bad" data-delrole="${esc(r.id)}">מחיקה</button>` : ""}</td></tr>`;
+  }).join("");
+  h += `</table></div>`;
+  if (ed) h += `<div class="row" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:end"><div style="flex:1;min-width:180px"><label for="nr">תפקיד חדש</label><input type="text" id="nr" placeholder="למשל: סגן"></div><button class="btn primary" id="addRole">הוספת תפקיד</button></div>`;
+  h += `</div>`;
+
+  h += `<div class="pn"><h3>משתמשים</h3><div class="tw"><table><tr><th>שם משתמש</th><th>שם לתצוגה</th><th>תפקיד</th><th>סיסמה חדשה</th><th></th></tr>`;
+  h += S.users.map(u => {
+    const self = u.id === me.id;
+    return `<tr><td>${esc(u.username)}</td><td>${esc(u.display)}</td><td><select data-urole="${esc(u.id)}" ${dis} ${self ? 'disabled title="אי אפשר לשנות את התפקיד של עצמך"' : ""} aria-label="תפקיד ${esc(u.username)}">${S.roles.map(r => `<option value="${esc(r.id)}" ${u.role === r.id ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select></td>
+      <td>${ed ? `<div style="display:flex;gap:6px"><input type="password" id="pw-${esc(u.id)}" aria-label="סיסמה חדשה ל${esc(u.username)}" autocomplete="new-password"><button class="btn small" data-pw="${esc(u.id)}">עדכון</button></div>` : ""}</td>
+      <td>${ed && !self ? `<button class="btn small bad" data-deluser="${esc(u.id)}">מחיקה</button>` : ""}</td></tr>`;
+  }).join("");
+  h += `</table></div>`;
+  if (ed) h += `<div class="addrow" style="margin-top:12px">
+    <div><label for="nu">שם משתמש</label><input type="text" id="nu" autocapitalize="off"></div>
+    <div><label for="nd">שם לתצוגה</label><input type="text" id="nd"></div>
+    <div><label for="np">סיסמה</label><input type="password" id="np" autocomplete="new-password"></div>
+    <div><label for="nrl">תפקיד</label><select id="nrl">${S.roles.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("")}</select></div>
+    <button class="btn primary" id="addUser">הוספת משתמש</button></div><div class="err" id="aerr"></div>`;
+  h += `</div>`;
+  h += `<div class="pn small">השינויים נשמרים בדפדפן הזה בלבד. כדי להעביר אותם למחשב אחר, לחץ "שמירה לקובץ" וטען את הקובץ שם.</div>`;
+  return h;
+};
+
+/* ---------- פעולות בתוכן ---------- */
+$("#main").addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t || !me) return;
+  if (t.dataset.filter) { reqFilter = t.dataset.filter; route(); return; }
+  if (t.dataset.dec && canEdit("approvals")) {
+    const r = S.requests.find(x => x.id === t.dataset.id); if (!r || r.status !== "open") return;
+    const choice = t.dataset.dec;
+    const note = ($("#n-" + CSS.escape(r.id)) || {}).value || "";
+    let text = "";
+    if (choice === "changed") {
+      text = (($("#c-" + CSS.escape(r.id)) || {}).value || "").trim();
+      if (!text || text === r.response) { alert("כדי לאשר עם שינוי, כתוב מענה מתוקן ששונה מהמענה המוצע."); return; }
+    }
+    r.status = choice;
+    r.decision = { by: me.id, at: new Date().toISOString(), choice, text, note: note.trim() };
+    log(`${choice === "approved" ? "אישר" : choice === "rejected" ? "דחה" : "שינה את המענה ב"} בקשה ${r.id}`);
+    save(); route(); return;
+  }
+  if (t.dataset.out && canEdit("admin")) {
+    const r = S.requests.find(x => x.id === t.dataset.out); if (!r) return;
+    r.outcome = (($("#o-" + CSS.escape(r.id)) || {}).value || "").trim();
+    log(`עדכן דיווח ביצוע בבקשה ${r.id}`); save(); route(); return;
+  }
+  if (!canEdit("admin")) return;
+  if (t.id === "addRole") {
+    const name = $("#nr").value.trim(); if (!name) return;
+    if (S.roles.some(r => r.name === name)) { alert("כבר יש תפקיד בשם הזה."); return; }
+    const perms = {}; S.areas.forEach(a => perms[a.id] = "none");
+    S.roles.push({ id: "r" + Date.now().toString(36), name, perms });
+    log(`הוסיף תפקיד "${name}"`); save(); route(); return;
+  }
+  if (t.dataset.delrole) {
+    const r = roleOf(t.dataset.delrole); if (!r || S.users.some(u => u.role === r.id) || r.id === me.role) return;
+    if (!confirm(`למחוק את התפקיד "${r.name}"?`)) return;
+    S.roles = S.roles.filter(x => x.id !== r.id);
+    log(`מחק תפקיד "${r.name}"`); save(); route(); return;
+  }
+  if (t.id === "addUser") {
+    const username = $("#nu").value.trim(), display = $("#nd").value.trim(), password = $("#np").value, role = $("#nrl").value;
+    const err = $("#aerr");
+    if (!username || !display || !password) { err.textContent = "צריך שם משתמש, שם לתצוגה וסיסמה."; return; }
+    if (S.users.some(u => u.username === username)) { err.textContent = "שם המשתמש כבר קיים."; return; }
+    S.users.push({ id: "u" + Date.now().toString(36), username, password, display, role });
+    log(`הוסיף משתמש "${username}" בתפקיד "${roleOf(role).name}"`); save(); route(); return;
+  }
+  if (t.dataset.deluser) {
+    const u = userOf(t.dataset.deluser); if (!u || u.id === me.id) return;
+    if (!confirm(`למחוק את המשתמש "${u.username}"?`)) return;
+    S.users = S.users.filter(x => x.id !== u.id);
+    log(`מחק משתמש "${u.username}"`); save(); route(); return;
+  }
+  if (t.dataset.pw) {
+    const u = userOf(t.dataset.pw), inp = $("#pw-" + CSS.escape(t.dataset.pw));
+    if (!u || !inp || !inp.value) return;
+    u.password = inp.value;
+    log(`עדכן סיסמה למשתמש "${u.username}"`); save(); route(); return;
+  }
+});
+$("#main").addEventListener("change", e => {
+  const t = e.target; if (!me) return;
+  if (t.dataset.proj && canEdit("projects")) {
+    const p = S.projects.find(x => x.id === t.dataset.proj); if (!p) return;
+    p.status = t.value; log(`שינה את מצב ${p.id} ל"${p.status}"`); save(); return;
+  }
+  if (!canEdit("admin")) return;
+  if (t.dataset.perm) {
+    const [rid, aid] = t.dataset.perm.split("|"); const r = roleOf(rid);
+    if (!r || (rid === me.role && aid === "admin")) return;
+    r.perms[aid] = t.value;
+    log(`קבע לתפקיד "${r.name}" באזור "${areaOf(aid).name}": ${LVNAME[t.value]}`); save(); route(); return;
+  }
+  if (t.dataset.urole) {
+    const u = userOf(t.dataset.urole); if (!u || u.id === me.id) return;
+    u.role = t.value; log(`העביר את "${u.username}" לתפקיד "${roleOf(u.role).name}"`); save(); route(); return;
+  }
+});
+
+/* ---------- הפעלה ---------- */
+S = loadState();
+if (S && !valid(S)) S = EMBED ? clone(EMBED) : null;
+let sid = null; try { sid = sessionStorage.getItem(SKEY); } catch (e) {}
+me = S && sid ? userOf(sid) || null : null;
+if (me) showApp(); else showLogin();
+</script>
+</body>
+</html>
